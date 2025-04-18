@@ -236,13 +236,13 @@ jobs:
           fi
 
       - name: Build kernel
-        if: ${{ github.event.inputs.CPU == 'sm8650' || github.event.inputs.CPU == 'sm8750' }} 
+        if: ${{ github.event.inputs.CPU == 'sm8650' || github.event.inputs.CPU == 'sm8750' || github.event.inputs.CPU == 'sm7675' }}
         run: |
           cd kernel_workspace
           ./kernel_platform/build_with_bazel.py -t ${{ github.event.inputs.CPUD }} gki
           
       - name: Fallback build kernel
-        if: ${{ github.event.inputs.CPU != 'sm8650' && github.event.inputs.CPU != 'sm8750' }} 
+        if: ${{ github.event.inputs.CPU != 'sm8650' && github.event.inputs.CPU != 'sm8750' && github.event.inputs.CPU != 'sm7675' }}
         run: |
          cd kernel_workspace
          LTO=thin ./kernel_platform/oplus/build/oplus_build_kernel.sh ${{ github.event.inputs.CPUD }} gki
@@ -294,7 +294,7 @@ jobs:
         if: ${{ github.event.inputs.SUSFS_CI == 'true' }}
         run: |
           LATEST_RUN_ID=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/sidex15/susfs4ksu-module/actions/runs" | jq -r '.workflow_runs[0].id')
+            "https://api.github.com/repos/sidex15/susfs4ksu-module/actions/runs?status=success" | jq -r '.workflow_runs[0].id')
 
           ARTIFACT_URL=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/repos/sidex15/susfs4ksu-module/actions/runs/$LATEST_RUN_ID/artifacts" | jq -r '.artifacts[0].archive_download_url')
@@ -309,8 +309,13 @@ jobs:
           wget https://github.com/sidex15/ksu_module_susfs/releases/latest/download/ksu_module_susfs_1.5.2+.zip
           cp ksu_module_susfs_1.5.2+.zip ./AnyKernel3/
 
+      - name: Set suffix
+        id: suffix
+        run: |
+          echo "value=${{ github.event.inputs.VFS == 'true' && '_VFS' || '' }}${{ github.event.inputs.LZ4 == 'true' && '_LZ4KD' || '' }}" >> $GITHUB_OUTPUT
+
       - name: Upload AnyKernel3
         uses: actions/upload-artifact@v4
         with:
-          name: AnyKernel3_SukiSUUltra_${{ env.KSUVER }}_${{ github.event.inputs.FEIL }}
+          name: AnyKernel3_SukiSUUltra_${{ env.KSUVER }}_${{ github.event.inputs.FEIL }}${{ steps.suffix.outputs.value }}
           path: ./AnyKernel3/*
